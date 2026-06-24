@@ -55,11 +55,11 @@ jobs:
           sudo mv sing-box-${SB_VERSION}-linux-amd64/sing-box /usr/local/bin/
           sing-box version
 
-      - name: Build rule-sets
+      - name: Build rule-sets (JSON)
         if: steps.check.outputs.changed == 'true'
         run: python3 scripts/build.py
 
-      - name: Compile .srs
+      - name: Compile .srs into dist/
         if: steps.check.outputs.changed == 'true'
         run: |
           sing-box rule-set compile dist/ru-whitelist-domains.json -o dist/ru-whitelist-domains.srs
@@ -69,33 +69,13 @@ jobs:
         if: steps.check.outputs.changed == 'true'
         run: echo "${{ steps.check.outputs.new_hash }}" > .last-hash
 
-      - name: Set release tag
-        if: steps.check.outputs.changed == 'true'
-        id: tag
-        run: echo "tag=v$(date -u +%Y.%m.%d)-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-
-      - name: Commit hash + source snapshot
+      - name: Commit and push
         if: steps.check.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           mkdir -p src_snapshot
           cp src/*.txt src_snapshot/
-          git add .last-hash src_snapshot
+          git add .last-hash src_snapshot dist
           git commit -m "Sync upstream: $(date -u +%Y-%m-%d)" || echo "nothing to commit"
           git push
-
-      - name: Create Release
-        if: steps.check.outputs.changed == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: "Update ${{ steps.tag.outputs.tag }}"
-          body: |
-            Автоматическая сборка по изменениям в апстриме
-            (hxehex/russia-mobile-internet-whitelist), хэш: ${{ steps.check.outputs.new_hash }}.
-          files: |
-            dist/ru-whitelist-domains.srs
-            dist/ru-whitelist-ips.srs
-            dist/ru-whitelist-domains.json
-            dist/ru-whitelist-ips.json
