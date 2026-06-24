@@ -1,0 +1,101 @@
+name: Sync upstream and build sing-box rule-sets
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # каждый день в 06:00 UTC
+  workflow_dispatch: {}    # + возможность запустить руками
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Download upstream lists
+        run: |
+          mkdir -p src
+          curl -sL -o src/whitelist.txt \
+            https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/whitelist.txt
+          curl -sL -o src/ipwhitelist.txt \
+            https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/ipwhitelist.txt
+          curl -sL -o src/cidrwhitelist.txt \
+            https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/cidrwhitelist.txt
+
+      - name: Compute hash and compare with last build
+        id: check
+        run: |
+          NEW_HASH=$(cat src/whitelist.txt src/ipwhitelist.txt src/cidrwhitelist.txt | sha256sum | cut -d' ' -f1)
+          OLD_HASH=""
+          if [ -f .last-hash ]; then
+            OLD_HASH=$(cat .last-hash)
+          fi
+          echo "new_hash=$NEW_HASH" >> "$GITHUB_OUTPUT"
+          if [ "$NEW_HASH" = "$OLD_HASH" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install sing-box
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          SB_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep -oP '"tag_name": "v\K[^"]+')
+          curl -sL -o sing-box.tar.gz \
+            "https://github.com/SagerNet/sing-box/releases/download/v${SB_VERSION}/sing-box-${SB_VERSION}-linux-amd64.tar.gz"
+          tar -xzf sing-box.tar.gz
+          sudo mv sing-box-${SB_VERSION}-linux-amd64/sing-box /usr/local/bin/
+          sing-box version
+
+      - name: Build rule-sets
+        if: steps.check.outputs.changed == 'true'
+        run: python3 scripts/build.py
+
+      - name: Compile .srs
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          sing-box rule-set compile dist/ru-whitelist-domains.json -o dist/ru-whitelist-domains.srs
+          sing-box rule-set compile dist/ru-whitelist-ips.json -o dist/ru-whitelist-ips.srs
+
+      - name: Save new hash
+        if: steps.check.outputs.changed == 'true'
+        run: echo "${{ steps.check.outputs.new_hash }}" > .last-hash
+
+      - name: Set release tag
+        if: steps.check.outputs.changed == 'true'
+        id: tag
+        run: echo "tag=v$(date -u +%Y.%m.%d)-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit hash + source snapshot
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p src_snapshot
+          cp src/*.txt src_snapshot/
+          git add .last-hash src_snapshot
+          git commit -m "Sync upstream: $(date -u +%Y-%m-%d)" || echo "nothing to commit"
+          git push
+
+      - name: Create Release
+        if: steps.check.outputs.changed == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "Update ${{ steps.tag.outputs.tag }}"
+          body: |
+            Автоматическая сборка по изменениям в апстриме
+            (hxehex/russia-mobile-internet-whitelist), хэш: ${{ steps.check.outputs.new_hash }}.
+          files: |
+            dist/ru-whitelist-domains.srs
+            dist/ru-whitelist-ips.srs
+            dist/ru-whitelist-domains.json
+            dist/ru-whitelist-ips.json
