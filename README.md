@@ -7,8 +7,6 @@ GitHub Actions раз в день (06:00 UTC) проверяет апстрим.
 автоматически собирает новые `.srs` и публикует их в [Releases](../../releases)
 (а так же raw JSON, из которых эти .srs скомпилированы).
 
-Можно также запустить сборку руками: Actions → Sync upstream and build sing-box rule-sets → Run workflow.
-
 ## Файлы в каждом релизе
 
 - `ru-whitelist-domains.srs` — домены (SNI) из `whitelist.txt`
@@ -50,23 +48,20 @@ GitHub Actions раз в день (06:00 UTC) проверяет апстрим.
         "tag": "ru-whitelist-domains",
         "type": "remote",
         "format": "binary",
-        "url": "https://github.com/<your-username>/<your-repo>/releases/latest/download/ru-whitelist-domains.srs",
+        "url": "https://github.com/Debik5/ru-mobile-whitelist-srs/releases/latest/download/ru-whitelist-domains.srs",
         "update_interval": "24h"
       },
       {
         "tag": "ru-whitelist-ips",
         "type": "remote",
         "format": "binary",
-        "url": "https://github.com/<your-username>/<your-repo>/releases/latest/download/ru-whitelist-ips.srs",
+        "url": "https://github.com/Debik5/ru-mobile-whitelist-srs/releases/latest/download/ru-whitelist-ips.srs",
         "update_interval": "24h"
       }
     ]
   }
 }
 ```
-
-С `remote` + `update_interval: 24h` тебе вообще не придётся руками что-то перекачивать —
-sing-box сам подтянет новую версию при каждом обновлении.
 
 ## Лицензия
 
