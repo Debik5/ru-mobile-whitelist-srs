@@ -4,7 +4,7 @@
 [hxehex/russia-mobile-internet-whitelist](https://github.com/hxehex/russia-mobile-internet-whitelist).
 
 GitHub Actions раз в день (06:00 UTC) проверяет апстрим. Если списки изменились —
-автоматически собирает новые `.srs` и публикует их в [Releases](../../releases)
+автоматически собирает новые `.srs` и публикует их в [/dist](/dist)
 (а так же raw JSON, из которых эти .srs скомпилированы).
 
 ## Файлы в каждом релизе
@@ -48,14 +48,14 @@ GitHub Actions раз в день (06:00 UTC) проверяет апстрим.
         "tag": "ru-whitelist-domains",
         "type": "remote",
         "format": "binary",
-        "url": "https://github.com/Debik5/ru-mobile-whitelist-srs/releases/latest/download/ru-whitelist-domains.srs",
+        "url": "https://raw.githubusercontent.com/Debik5/ru-mobile-whitelist-srs/main/dist/ru-whitelist-domains.srs",
         "update_interval": "24h"
       },
       {
         "tag": "ru-whitelist-ips",
         "type": "remote",
         "format": "binary",
-        "url": "https://github.com/Debik5/ru-mobile-whitelist-srs/releases/latest/download/ru-whitelist-ips.srs",
+        "url": "https://raw.githubusercontent.com/Debik5/ru-mobile-whitelist-srs/main/dist/ru-whitelist-ips.srs",
         "update_interval": "24h"
       }
     ]
